@@ -1,0 +1,10 @@
+package logger
+
+type Logger interface {
+	Log(msg string)
+}
+
+
+type logger struct {
+	f 
+}
