@@ -11,3 +11,17 @@ type ElectionNotice struct {
 type TimeForHeartbeat struct {
 	t time.Time
 }
+
+type StartElection struct {
+}
+
+type GotVote struct {
+	response VoteResponse
+}
+
+type StartLeader struct {	
+}
+
+
+type GotAppendEntryResponse struct {
+}

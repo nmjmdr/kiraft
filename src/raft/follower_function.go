@@ -1,5 +1,9 @@
 package raft
 
+import (
+	"fmt"
+)
+
 func followerFn(n *Node,evt interface{}) {
 	switch t := evt.(type) {
 	case *ElectionNotice :
@@ -7,8 +11,12 @@ func followerFn(n *Node,evt interface{}) {
 		heard := n.haveHeardFromLeader(t.t)
 		if !heard {
 			// then have to transition to candidate and start election
-			n.currentRole = Candidate
-			n.currentTerm = n.currentTerm + 1
+			n.incrementTerm()
+			n.setRole(Candidate)
+			go func() {
+				// send StartElection here
+				n.eventChannel <- &StartElection{}
+			}()
 		} else {
 			// ignore it
 		}
@@ -16,7 +24,13 @@ func followerFn(n *Node,evt interface{}) {
 	case *TimeForHeartbeat :
 		// ignore this
 		// the node is a follower, nothing to do
+	case *GotVote:
+		// ignore this, could have been a delayed vote response
+	default :
+	panic(fmt.Sprintf("Unexpected event %T recieved by follower function\n",t))
 	}
+
+
 }
 
 

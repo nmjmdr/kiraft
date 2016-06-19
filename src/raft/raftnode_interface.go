@@ -7,6 +7,8 @@ type RaftNode interface {
 	IsRunning() bool
 	AppendEntry(Entry) (AppendResponse,error)
 	RequestForVote(VoteRequest) (VoteResponse,error)
+	RoleChange() (chan Role)
+	Id() string
 }
 
 

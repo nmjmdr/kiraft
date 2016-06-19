@@ -59,7 +59,11 @@ type Node struct {
 	handlers *handlers
 
 	trace trace
+
+	roleChange chan Role
 }
+
+
 
 
 func NewNode(id string,config Config,transport Transport,stable Stable) *Node {
@@ -80,6 +84,7 @@ func NewNode(id string,config Config,transport Transport,stable Stable) *Node {
 
 	n.eventChannel = make(chan interface{})
 	n.quitChannel = make(chan bool)
+	n.roleChange = make(chan Role)
 
 	n.handlers = NewHandlers()
 	
@@ -139,4 +144,13 @@ func (n *Node) Stop() {
 
 func (n *Node) IsRunning() bool {
 	return n.running
+}
+
+
+func (n *Node) RoleChange() (chan Role) {
+	return n.roleChange
+}
+
+func (n *Node) Id() string {
+	return n.id
 }

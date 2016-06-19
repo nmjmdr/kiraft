@@ -13,10 +13,12 @@ type Logger interface {
 
 type logger struct {
 	buf *bufio.Writer
+	wMutex *sync.Mutex
 }
 
 var instance *logger
 var mutex sync.Mutex
+
 
 
 func GetLogger() Logger {
@@ -26,21 +28,22 @@ func GetLogger() Logger {
 
 	if instance == nil {
 		instance = new(logger)
-		f, err := os.Create("./raft_log1.txt")
+		f, err := os.Create("./raft_log.txt")
 		
 		if err != nil {
 			panic(err)
 		}
 
-		instance.buf = bufio.NewWriter(f)		
+		instance.buf = bufio.NewWriter(f)
+		instance.wMutex = &sync.Mutex{}
 	}
 	
 	return instance
 }
 
 func (l *logger) Log(msg string) {
-	defer mutex.Unlock()
-	mutex.Lock()
+	defer l.wMutex.Unlock()
+	l.wMutex.Lock()
 	l.buf.WriteString(msg)
 	l.buf.Flush()
 }
