@@ -124,12 +124,48 @@ func (n *Node) loop() {
 
 
 
-func (n *Node) 	AppendEntry(Entry) (AppendResponse,error) {
-	return AppendResponse{},nil
+func (n *Node) 	AppendEntry(entry Entry) (AppendResponse,error) {
+
+	
+	if entry.Term < n.currentTerm {
+		return AppendResponse{ Reply:false,Term:n.currentTerm,From:n.id },nil
+	}
+
+	// heard from leader, set the trace
+	n.trace.lastHeardFromLeader = time.Now().UnixNano()
+	
+	if entry.Term > n.currentTerm {
+		n.higherTermDiscovered(entry.Term)
+	}
+
+	// do other checks here - according to raft paper
+	
+	return AppendResponse{ Reply: true, Term:n.currentTerm,From:n.id },nil
 }
 
-func (n *Node) RequestForVote(VoteRequest) (VoteResponse,error) {
-	return VoteResponse{},nil
+func (n *Node) RequestForVote(voteReq VoteRequest) (VoteResponse,error) {
+
+	if voteReq.Term < n.currentTerm {
+		return VoteResponse{ VoteGranted:false,From:n.id,TermToUpdate:n.currentTerm },nil
+	}
+
+	if voteReq.Term > n.currentTerm {
+		n.higherTermDiscovered(voteReq.Term)
+	}
+
+	votedFor,ok := n.stable.Get(VotedForKey)
+	if !ok || votedFor == "" || votedFor == voteReq.CandidateId {
+		// other checks: !!!
+		// perform log checks
+
+		// store that the vote was granted
+		n.stable.Store(VotedForKey,voteReq.CandidateId)
+		// rasie votedFor event
+		return VoteResponse{ VoteGranted:true,From:n.id,TermToUpdate:n.currentTerm },nil
+		
+	}
+	
+	return VoteResponse{ VoteGranted:false,From:n.id,TermToUpdate:n.currentTerm },nil
 }
 
 func (n *Node) CurrentRole() Role {

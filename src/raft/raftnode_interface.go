@@ -33,5 +33,6 @@ type Entry struct {
 type AppendResponse struct {
 	Reply bool
 	Term uint64
+	From string
 }
 

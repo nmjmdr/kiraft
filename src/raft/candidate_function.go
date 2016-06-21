@@ -6,17 +6,21 @@ import (
 
 func candidateFn(n *Node,evt interface{}) {
 	switch t := evt.(type) {
-	case *ElectionNotice :
-		// handle this
+	case *ElectionNotice :	
 		// the node did not get elected,
 		// increment the term, and restart the election
+		n.trace.lastElectionSignal = t.t.UnixNano()
+		n.incrementTerm()
+		go func() {
+			n.eventChannel <- &StartElection{}
+		}()		
 	case *StartElection:
 		n.askForVotes()	
 	case *TimeForHeartbeat :
 		// ignore this
 		// the node is a candidate, nothing to do
 	case *GotVote:
-		handleGotVote(n,t)
+		handleGotVote(n,t)	
 	default :
 	panic(fmt.Sprintf("Unexpected event %T recieved by candidate function\n",t))
 	}

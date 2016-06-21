@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	s := NewSimulator(1)
+	s := NewSimulator(2)
 
 	s.Start()
 

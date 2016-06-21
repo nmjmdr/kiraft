@@ -24,4 +24,5 @@ type StartLeader struct {
 
 
 type GotAppendEntryResponse struct {
+	response AppendResponse
 }

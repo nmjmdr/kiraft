@@ -2,6 +2,7 @@ package raft
 
 import (
 	"fmt"
+	"logger"
 )
 
 func followerFn(n *Node,evt interface{}) {
@@ -9,8 +10,13 @@ func followerFn(n *Node,evt interface{}) {
 	case *ElectionNotice :
 		//check when did this node hear from the leader?
 		heard := n.haveHeardFromLeader(t.t)
+
+		// reset the lastElectionSignal to new one
+		n.trace.lastElectionSignal = t.t.UnixNano()
+
 		if !heard {
 			// then have to transition to candidate and start election
+			logger.GetLogger().Log(fmt.Sprintf("%s - have not heard from the leader, will send start election event\n",n.id))
 			n.incrementTerm()
 			n.setRole(Candidate)
 			go func() {

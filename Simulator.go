@@ -51,6 +51,7 @@ func (s *sim) Start() {
 			}
 		}(node)
 		node.Start()
+		fmt.Printf("%s - role: %d\n",node.Id(),node.CurrentRole())
 	}
 }
 

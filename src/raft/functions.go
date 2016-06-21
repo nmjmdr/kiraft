@@ -3,15 +3,15 @@ package raft
 import (
 	"time"
 	"math/rand"
+	"fmt"
+	"logger"
 )
 
 
 func (n *Node) haveHeardFromLeader(newElectionSignal time.Time) bool {
 
 
-	heard :=  (newElectionSignal.UnixNano() >= n.trace.lastHeardFromLeader) &&  (n.trace.lastElectionSignal < n.trace.lastHeardFromLeader)		
-
-	n.trace.lastElectionSignal = newElectionSignal.UnixNano()
+	heard :=  (newElectionSignal.UnixNano() >= n.trace.lastHeardFromLeader) &&  (n.trace.lastElectionSignal < n.trace.lastHeardFromLeader)
 
 	return heard
 	
@@ -21,24 +21,66 @@ func (n *Node) askForVotes() {
 
 	//voteReq := VoteRequest{ Term:n.currentTerm,CandidateId:n.id,LastLogIndex:0,LastLogTerm:0 }
 
+	logger.GetLogger().Log(fmt.Sprintf("%s - asking for votes\n",n.id))
+
 	// self vote
 	go func(n *Node) {
 		gotVote := GotVote{ response : VoteResponse { VoteGranted:true, From:n.id,TermToUpdate:0 } }
 
 		n.eventChannel <- &gotVote
 	}(n)
-
-	/*
+	
 	peers := n.config.Peers()
-	for _,peer := peers {
-		go func(p Peer) {
-			voteResp
-		}(peer)
-	}*/
+	voteReq := VoteRequest { Term : n. currentTerm, CandidateId: n.id, LastLogIndex:0, LastLogTerm:0 }
+	for _,peer := range peers {
+
+		if peer.Id == n.id {
+			continue
+		}
+		
+		go func(p Peer,vreq VoteRequest) {		
+			voteResp,err := n.transport.RequestForVote(vreq,p)
+			if err != nil {
+				logger.GetLogger().Log(fmt.Sprintf("%s node - RequestForVote got an error response from peer %s. Error detail: %s\n",n.id,p.Id,err))
+				return
+			}
+
+			// generate got vote event
+			n.eventChannel <- &GotVote{ response: voteResp }
+		}(peer,voteReq)
+	}
+}
+
+
+func (n *Node) higherTermDiscovered(term uint64) {
+	n.currentTerm = term
+
+	if n.currentRole != Follower {
+		n.setRole(Follower)
+	}
 }
 
 func (n *Node) sendHeartbeat() {
-	
+
+	peers := n.config.Peers()
+	entry := Entry{ Term : n.currentTerm, From: n.id }
+	for _,peer := range peers {
+
+		if peer.Id == n.id {
+			continue
+		}
+		
+		go func(p Peer,e Entry) {		
+			appendResponse,err := n.transport.AppendEntry(e,p)
+			if err != nil {
+				logger.GetLogger().Log(fmt.Sprintf("%s node - Append Entry got an error response from peer %s. Error detail: %s\n",n.id,p.Id,err))
+				return
+			}
+
+			// generate append entry response
+			n.eventChannel <- &GotAppendEntryResponse{ response: appendResponse }
+		}(peer,entry)
+	}
 }
 
 func (n *Node) setHeartbeatTimeout(d time.Duration) {
