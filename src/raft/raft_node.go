@@ -131,8 +131,11 @@ func (n *Node) 	AppendEntry(entry Entry) (AppendResponse,error) {
 		return AppendResponse{ Reply:false,Term:n.currentTerm,From:n.id },nil
 	}
 
+	at := time.Now().UnixNano()
+
+	logger.GetLogger().Log(fmt.Sprintf("%s - Got Append Entry from: %s at %d\n",n.id,entry.From,at))
 	// heard from leader, set the trace
-	n.trace.lastHeardFromLeader = time.Now().UnixNano()
+	n.trace.lastHeardFromLeader = at
 	
 	if entry.Term > n.currentTerm {
 		n.higherTermDiscovered(entry.Term)

@@ -2,6 +2,7 @@ package raft
 
 import (
 	"fmt"
+	"time"
 )
 
 func candidateFn(n *Node,evt interface{}) {
@@ -9,7 +10,8 @@ func candidateFn(n *Node,evt interface{}) {
 	case *ElectionNotice :	
 		// the node did not get elected,
 		// increment the term, and restart the election
-		n.trace.lastElectionSignal = t.t.UnixNano()
+		//n.trace.lastElectionSignal = t.t.UnixNano()
+		n.trace.lastElectionSignal = time.Now().UnixNano()
 		n.incrementTerm()
 		go func() {
 			n.eventChannel <- &StartElection{}
@@ -22,7 +24,7 @@ func candidateFn(n *Node,evt interface{}) {
 	case *GotVote:
 		handleGotVote(n,t)	
 	default :
-	panic(fmt.Sprintf("Unexpected event %T recieved by candidate function\n",t))
+		panic(fmt.Sprintf("%s - Unexpected event %T recieved by candidate function\n",n.id,t))
 	}
 }
 

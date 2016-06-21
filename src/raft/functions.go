@@ -13,6 +13,8 @@ func (n *Node) haveHeardFromLeader(newElectionSignal time.Time) bool {
 
 	heard :=  (newElectionSignal.UnixNano() >= n.trace.lastHeardFromLeader) &&  (n.trace.lastElectionSignal < n.trace.lastHeardFromLeader)
 
+	logger.GetLogger().Log(fmt.Sprintf("%s - in have heard - last-heard-from-leader: %d, last-election-signal: %d, new-election-signal %d\n",n.id,n.trace.lastHeardFromLeader,n.trace.lastElectionSignal,newElectionSignal.UnixNano()))
+
 	return heard
 	
 }
@@ -97,7 +99,7 @@ func (n *Node) incrementTerm() {
 
 func (n *Node) setRole(role Role) {
 	n.currentRole = role
-	go func(n *Node,role Role) {
+	go func(n *Node,role Role) {	
 		n.roleChange <- role
 	}(n,role)
 }
@@ -122,14 +124,15 @@ func (n *Node) startTimeSignals() {
 	n.heartbeatTicker = time.NewTicker(n.heartbeatTimeout)
 
 	go func() {
-		for t := range n.electionTicker.C {
-			n.eventChannel <- &ElectionNotice{t:t}
+		for _ = range n.electionTicker.C {
+			//logger.GetLogger().Log(fmt.Sprintf("%s - will send election notice at t: %d\n",n.id,t.UnixNano()))
+			n.eventChannel <- &ElectionNotice{}
 		}
 	}()
 
 	go func() {
-		for t := range n.heartbeatTicker.C {
-			n.eventChannel <- &TimeForHeartbeat{t:t}
+		for _ = range n.heartbeatTicker.C {
+			n.eventChannel <- &TimeForHeartbeat{}
 		}
 	}()
 }

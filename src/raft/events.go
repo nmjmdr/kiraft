@@ -1,15 +1,13 @@
 package raft
 
 import (
-	"time"
+	//"time"
 )
 
 type ElectionNotice struct {
-	t time.Time
 }
 
 type TimeForHeartbeat struct {
-	t time.Time
 }
 
 type StartElection struct {

@@ -4,6 +4,8 @@ import (
 	"testing"
 	"strconv"
 	"time"
+	"sync"
+	"fmt"
 )
 
 
@@ -122,4 +124,140 @@ func Test_SingleNode(t *testing.T) {
 			t.Fatal("The node is not in the expected state")
 		}
 	}
+}
+
+
+
+func waitForLeaderRole(nodes [] RaftNode) RaftNode  {
+
+	gotLeader := make(chan bool)
+	
+	wg := &sync.WaitGroup{}
+	var leader RaftNode
+
+	
+	wg.Add(1)
+	
+	for _,node := range nodes {
+
+		go func(node RaftNode) {
+
+			for {
+				select {
+				case role,ok := <- node.RoleChange():
+					if ok {						
+						if role == Leader {
+							leader = node
+							gotLeader <- true
+							wg.Done()
+							return
+						}
+					}
+				case <- gotLeader:
+					return				
+				}
+			}
+		}(node)	
+	}
+
+	wg.Wait()
+
+	return leader
+}
+
+
+func getALeader(numNodes int) ([]RaftNode,RaftNode) {
+	
+	
+	config := getPeerConfiguration(numNodes)
+	stable := NewInMemoryStable()
+	transport := NewInMemoryTransport()
+	
+	nodes := makeNodes(numNodes,config,stable,transport)
+
+
+	
+	// reduce the time out for unit test
+	for _,node := range nodes {
+		n,_ := node.(*Node)
+		n.setHeartbeatTimeout(10)
+		n.setElectionTimeout(getRandomTimeout(50,100))
+	}
+
+
+	for _,node := range nodes {
+		node.Start()
+	}
+
+
+	leader := waitForLeaderRole(nodes)
+
+	return nodes,leader
+
+}
+
+func Test_MultipleNode(t *testing.T) {
+
+	numNodes := 3
+	nodes,leader := getALeader(numNodes)
+	
+	t.Log(fmt.Sprintf("Leader: %s\n",leader.Id()))
+	
+
+	checkLeaderAmongN(nodes,t)
+
+}
+
+func checkLeaderAmongN(nodes []RaftNode,t *testing.T) {
+// there should be one leader and two followers
+	followerCount := 0
+	leaderCount := 0
+	for _,node := range nodes {
+		if node.CurrentRole() == Leader {
+			leaderCount++
+		} else if node.CurrentRole() == Follower {
+			followerCount++
+		} else {
+			t.Fatal(fmt.Sprintf("%s is in unexpected state: %d",node.Id(),node.CurrentRole()))
+		}
+	}
+
+	if leaderCount != 1 || followerCount != len(nodes) - 1 {
+		t.Fatal("The nodes are in unexpected states")
+	}
+}
+
+
+func Test_Stop_Leader(t *testing.T) {
+
+	numNodes := 3
+	nodes,leader := getALeader(numNodes)
+	
+	t.Log(fmt.Sprintf("Leader: %s\n",leader.Id()))
+
+	checkLeaderAmongN(nodes,t)
+
+	// now we will stop the leader
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	var newLeader RaftNode
+	go func(w *sync.WaitGroup) {
+		newLeader = waitForLeaderRole(nodes)
+		w.Done()
+	}(wg)
+
+	leader.Stop()
+	wg.Wait()
+
+	t.Log(fmt.Sprintf("New leader - %s\n",newLeader.Id()))
+
+	newNodes := make([]RaftNode,0)
+
+	for _,node := range nodes {
+		if node.IsRunning() {
+			newNodes = append(newNodes,node)
+		}
+	}
+
+	checkLeaderAmongN(newNodes,t)
 }

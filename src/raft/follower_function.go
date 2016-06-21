@@ -3,16 +3,19 @@ package raft
 import (
 	"fmt"
 	"logger"
+	"time"
 )
 
 func followerFn(n *Node,evt interface{}) {
 	switch t := evt.(type) {
 	case *ElectionNotice :
 		//check when did this node hear from the leader?
-		heard := n.haveHeardFromLeader(t.t)
+		
+		newSignal := time.Now()
+		heard := n.haveHeardFromLeader(newSignal)
 
 		// reset the lastElectionSignal to new one
-		n.trace.lastElectionSignal = t.t.UnixNano()
+		n.trace.lastElectionSignal = newSignal.UnixNano()
 
 		if !heard {
 			// then have to transition to candidate and start election
@@ -33,7 +36,7 @@ func followerFn(n *Node,evt interface{}) {
 	case *GotVote:
 		// ignore this, could have been a delayed vote response
 	default :
-	panic(fmt.Sprintf("Unexpected event %T recieved by follower function\n",t))
+		panic(fmt.Sprintf("%s - Unexpected event %T recieved by follower function\n",n.id,t))
 	}
 
 

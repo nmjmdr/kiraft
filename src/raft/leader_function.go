@@ -30,7 +30,7 @@ func leaderFn(n *Node,evt interface{}) {
 		// for log later here
 	
 	default :
-	panic(fmt.Sprintf("Unexpected event %T recieved by leader function\n",t))
+		panic(fmt.Sprintf("%s - Unexpected event %T recieved by leader function\n",n.id,t))
 	}
 }
 
