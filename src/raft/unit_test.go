@@ -261,3 +261,58 @@ func Test_Stop_Leader(t *testing.T) {
 
 	checkLeaderAmongN(newNodes,t)
 }
+
+
+
+func Test_Stop_Leader_Then_Start(t *testing.T) {
+
+	numNodes := 3
+	nodes,leader := getALeader(numNodes)
+	
+	t.Log(fmt.Sprintf("Leader: %s\n",leader.Id()))
+
+	checkLeaderAmongN(nodes,t)
+
+	// now we will stop the leader
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	var newLeader RaftNode
+	go func(w *sync.WaitGroup) {
+		newLeader = waitForLeaderRole(nodes)
+		w.Done()
+	}(wg)
+
+	leader.Stop()
+	wg.Wait()
+
+	oldLeader := leader
+
+	t.Log(fmt.Sprintf("New leader - %s\n",newLeader.Id()))
+
+	newNodes := make([]RaftNode,0)
+
+	for _,node := range nodes {
+		if node.IsRunning() {
+			newNodes = append(newNodes,node)
+		}
+	}
+
+	checkLeaderAmongN(newNodes,t)
+
+	wg.Add(1)
+	go func(w *sync.WaitGroup,n RaftNode) {
+		defer w.Done()
+		select {
+		case <- n.RoleChange():
+			return
+		}
+	}(wg,oldLeader)
+
+	oldLeader.Start()
+
+	wg.Wait()
+
+	checkLeaderAmongN(nodes,t)
+
+	
+}
