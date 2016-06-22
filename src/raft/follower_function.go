@@ -36,16 +36,19 @@ func followerFn(n *Node,evt interface{}) {
 	case *GotVote:
 		// ignore this, could have been a delayed vote response
 	case *GotAppendEntryResponse:
-		// could be a delayed response (this node could have been a leader earlier?)
-		// how do we handle such a case?
-		fmt.Printf("Warning! - Checxk this!! Node %s - recieved Append entry response\n",n.id)
-	
+		// could be a delayed response (this node could have been a leader earlier)
+
+		// should we check explictily for reply flag in response?
+		
+		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved Append entry response from: %s while being a follower - ",n.id,t.response.From))
+			
 		if t.response.Term < n.currentTerm {
-			fmt.Printf("Warning! - Check this!! Node %s - recived an old Append entry response\n",n.id)
+			logger.GetLogger().Log(fmt.Sprintf("With an older term, term: %d\n",t.response.Term))
+			// should we do something here?
 		} else {
-			fmt.Printf("Warning! - Node %s - recieved Append entry response with term equal ot greater than current\n",n.id)
+			logger.GetLogger().Log(fmt.Sprintf("With a current or and a newer term, term: %d - ignoring it, the node has already transitioned to follower\n",t.response.Term))
 		}
-		panic("check this!!")
+		
 		
 	default :
 		panic(fmt.Sprintf("%s - Unexpected event %T recieved by follower function\n",n.id,t))

@@ -58,6 +58,7 @@ func (n *Node) higherTermDiscovered(term uint64) {
 	n.currentTerm = term
 
 	if n.currentRole != Follower {
+		logger.GetLogger().Log(fmt.Sprintf("%s - discovered a higher term, will transition from %d to 3 (follower)\n",n.id,n.currentRole))
 		n.setRole(Follower)
 	}
 }
