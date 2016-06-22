@@ -22,7 +22,9 @@ func candidateFn(n *Node,evt interface{}) {
 		// ignore this
 		// the node is a candidate, nothing to do
 	case *GotVote:
-		handleGotVote(n,t)	
+		handleGotVote(n,t)
+	case *HigherTermDiscovered:
+		n.higherTermDiscovered(t.term)	
 	default :
 		panic(fmt.Sprintf("%s - Unexpected event %T recieved by candidate function\n",n.id,t))
 	}

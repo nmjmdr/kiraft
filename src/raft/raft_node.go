@@ -123,6 +123,11 @@ func (n *Node) loop() {
 }
 
 
+/*
+ Question:
+Should I push AppendEntry and RequestForVote as events which have to dispacthed?
+and later the below methods wait for a return value on different chennels??
+*/
 
 func (n *Node) 	AppendEntry(entry Entry) (AppendResponse,error) {
 
@@ -134,14 +139,21 @@ func (n *Node) 	AppendEntry(entry Entry) (AppendResponse,error) {
 	at := time.Now().UnixNano()
 
 	logger.GetLogger().Log(fmt.Sprintf("%s - Got Append Entry from: %s at %d\n",n.id,entry.From,at))
+
+	
 	// heard from leader, set the trace
 	n.trace.lastHeardFromLeader = at
 	
 	if entry.Term > n.currentTerm {
-		n.higherTermDiscovered(entry.Term)
+
+		go func(n *Node,term uint64,from string) {
+			n.eventChannel <- &HigherTermDiscovered{term:term,from:from}
+		}(n,entry.Term,entry.From)
 	}
 
+
 	// do other checks here - according to raft paper
+	// we will have to copy the log here
 	
 	return AppendResponse{ Reply: true, Term:n.currentTerm,From:n.id },nil
 }
@@ -153,7 +165,9 @@ func (n *Node) RequestForVote(voteReq VoteRequest) (VoteResponse,error) {
 	}
 
 	if voteReq.Term > n.currentTerm {
-		n.higherTermDiscovered(voteReq.Term)
+		go func(n *Node,term uint64,from string) {
+			n.eventChannel <- &HigherTermDiscovered{term:term,from:from}
+		}(n,voteReq.Term,voteReq.CandidateId)
 	}
 
 	votedFor,ok := n.stable.Get(VotedForKey)

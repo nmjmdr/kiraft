@@ -28,7 +28,8 @@ func leaderFn(n *Node,evt interface{}) {
 
 		// do other things - like maintaining the pointer to all followers
 		// for log later here
-	
+	case *HigherTermDiscovered:
+		n.higherTermDiscovered(t.term)	
 	default :
 		panic(fmt.Sprintf("%s - Unexpected event %T recieved by leader function\n",n.id,t))
 	}

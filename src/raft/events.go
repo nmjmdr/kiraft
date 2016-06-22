@@ -24,3 +24,12 @@ type StartLeader struct {
 type GotAppendEntryResponse struct {
 	response AppendResponse
 }
+
+
+type HigherTermDiscovered struct {
+	term uint64
+	from string
+}
+
+
+

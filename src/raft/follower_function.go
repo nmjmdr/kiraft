@@ -49,7 +49,8 @@ func followerFn(n *Node,evt interface{}) {
 			logger.GetLogger().Log(fmt.Sprintf("With a current or and a newer term, term: %d - ignoring it, the node has already transitioned to follower\n",t.response.Term))
 		}
 		
-		
+	case *HigherTermDiscovered:
+		n.higherTermDiscovered(t.term)	
 	default :
 		panic(fmt.Sprintf("%s - Unexpected event %T recieved by follower function\n",n.id,t))
 	}
