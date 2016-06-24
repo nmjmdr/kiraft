@@ -8,6 +8,7 @@ import (
 type Simulator interface {
 	Start()
 	Stop()
+	GetStates() []string
 }
 
 type sim struct {
@@ -53,6 +54,17 @@ func (s *sim) Start() {
 		node.Start()
 		fmt.Printf("%s - role: %d\n",node.Id(),node.CurrentRole())
 	}
+}
+
+func (s *sim) GetStates() []string {
+
+	arr := make([]string,0)
+
+	for _,n := range s.nodes {
+		arr = append(arr,fmt.Sprintf("%s (node) - %d",n.Id(),n.CurrentRole()))
+		
+	}
+	return arr
 }
 
 func (s *sim) Stop() {

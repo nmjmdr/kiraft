@@ -3,6 +3,7 @@ package raft
 import (
 	"fmt"
 	"time"
+	"logger"
 )
 
 func candidateFn(n *Node,evt interface{}) {
@@ -23,8 +24,28 @@ func candidateFn(n *Node,evt interface{}) {
 		// the node is a candidate, nothing to do
 	case *GotVote:
 		handleGotVote(n,t)
+	/*
+	// check if we need this?
 	case *HigherTermDiscovered:
-		n.higherTermDiscovered(t.term)	
+		n.higherTermDiscovered(t.term)
+*/
+	case *GotAppendEntryResponse:
+		// could be a delayed response (this node could have been a leader earlier)
+
+		// should we check explictily for reply flag in response?
+		
+		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved Append entry response from: %s while being a candidate - ",n.id,t.response.From))
+			
+		if t.response.Term < n.currentTerm {
+			logger.GetLogger().Log(fmt.Sprintf("With an older term, term: %d\n",t.response.Term))
+			// should we do something here?
+		} else {
+			logger.GetLogger().Log(fmt.Sprintf("With a current or and a newer term, term: %d - ignoring it, the node has already transitioned to follower and to a candidate\n",t.response.Term))
+		}
+	case *GotAppendEntryRequest:
+		n.handleAppendEntryRequest(t.entry)
+	case *GotRequestForVote:
+		n.handleRequestForVote(t.voteRequest)
 	default :
 		panic(fmt.Sprintf("%s - Unexpected event %T recieved by candidate function\n",n.id,t))
 	}

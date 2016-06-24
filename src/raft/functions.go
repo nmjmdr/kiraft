@@ -7,6 +7,44 @@ import (
 	"logger"
 )
 
+func (n *Node) handleRequestForVote(voteReq VoteRequest) {
+
+	if voteReq.Term > n.currentTerm {
+		n.higherTermDiscovered(voteReq.Term)
+	}
+
+	votedFor,ok := n.stable.Get(VotedForKey)
+	if !ok || votedFor == "" || votedFor == voteReq.CandidateId {
+		// other checks: !!!
+		// perform log checks
+
+		// store that the vote was granted
+		n.stable.Store(VotedForKey,voteReq.CandidateId)
+		n.voteResponseChannel <- VoteResponse{ VoteGranted:true,From:n.id,TermToUpdate:n.currentTerm }
+		
+	} else {
+		n.voteResponseChannel <- VoteResponse{ VoteGranted:false,From:n.id,TermToUpdate:n.currentTerm }
+	}
+}
+
+
+
+func (n *Node) handleAppendEntryRequest(entry Entry) {
+
+	// first set the trace
+	n.trace.lastHeardFromLeader = time.Now().UnixNano()
+
+	if entry.Term > n.currentTerm {
+		n.higherTermDiscovered(entry.Term)
+	}
+
+	// do other checks here - according to raft paper
+	// we will have to copy the log here
+
+	go func() {
+		n.appendResponseChannel <-  AppendResponse{ Reply:true, Term:n.currentTerm, From:n.id }
+	}()
+}
 
 func (n *Node) haveHeardFromLeader(newElectionSignal time.Time) bool {
 
@@ -99,6 +137,9 @@ func (n *Node) incrementTerm() {
 }
 
 func (n *Node) setRole(role Role) {
+
+	logger.GetLogger().Log(fmt.Sprintf("%s - transitioned from %d to %d\n",n.id,n.currentRole,role))
+	
 	n.currentRole = role
 	go func(n *Node,role Role) {	
 		n.roleChange <- role
@@ -136,6 +177,12 @@ func (n *Node) startTimeSignals() {
 			n.eventChannel <- &TimeForHeartbeat{}
 		}
 	}()
+}
+
+
+func (n *Node) stopTimeSignals() {
+	n.electionTicker.Stop()
+	n.heartbeatTicker.Stop()	
 }
 
 func (n *Node) setTermFromStable() {

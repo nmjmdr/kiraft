@@ -48,9 +48,15 @@ func followerFn(n *Node,evt interface{}) {
 		} else {
 			logger.GetLogger().Log(fmt.Sprintf("With a current or and a newer term, term: %d - ignoring it, the node has already transitioned to follower\n",t.response.Term))
 		}
-		
+	/*
+	// check if we need this? - as we are changing the way append entry is being handled
 	case *HigherTermDiscovered:
-		n.higherTermDiscovered(t.term)	
+		n.higherTermDiscovered(t.term)
+*/
+	case *GotAppendEntryRequest:
+		n.handleAppendEntryRequest(t.entry)
+	case *GotRequestForVote:
+		n.handleRequestForVote(t.voteRequest)
 	default :
 		panic(fmt.Sprintf("%s - Unexpected event %T recieved by follower function\n",n.id,t))
 	}

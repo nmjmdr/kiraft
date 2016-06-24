@@ -5,6 +5,7 @@ import (
 	"sync"
 	"logger"
 	"fmt"
+	"errors"
 )
 
 
@@ -61,6 +62,9 @@ type Node struct {
 	trace trace
 
 	roleChange chan Role
+
+	appendResponseChannel chan AppendResponse
+	voteResponseChannel chan VoteResponse
 }
 
 
@@ -70,13 +74,11 @@ func NewNode(id string,config Config,transport Transport,stable Stable) *Node {
 	n := new(Node)
 	n.id = id
 	n.currentTerm = 0
-	n.currentRole = Follower
+	
 
 	n.config = config
 	n.stable = stable
 	n.transport = transport
-
-	n.setTermFromStable()
 
 	n.setTimeoutValues()
 
@@ -85,6 +87,8 @@ func NewNode(id string,config Config,transport Transport,stable Stable) *Node {
 	n.eventChannel = make(chan interface{})
 	n.quitChannel = make(chan bool)
 	n.roleChange = make(chan Role)
+	n.appendResponseChannel = make(chan AppendResponse)
+	n.voteResponseChannel = make(chan VoteResponse)
 
 	n.handlers = NewHandlers()
 	
@@ -94,9 +98,12 @@ func NewNode(id string,config Config,transport Transport,stable Stable) *Node {
 
 func (n *Node) Start() {
 
+	n.running = true
+	n.currentRole = Follower
+	n.setTermFromStable()
+
 	n.startTimeSignals()
 	n.loop()
-	n.running = true
 }
 
 func (n *Node) loop() {
@@ -134,28 +141,21 @@ func (n *Node) 	AppendEntry(entry Entry) (AppendResponse,error) {
 	
 	if entry.Term < n.currentTerm {
 		return AppendResponse{ Reply:false,Term:n.currentTerm,From:n.id },nil
-	}
+	}	
 
-	at := time.Now().UnixNano()
+	go func() {
+		n.eventChannel <- &GotAppendEntryRequest{ entry: entry }
+	}()
 
-	logger.GetLogger().Log(fmt.Sprintf("%s - Got Append Entry from: %s at %d\n",n.id,entry.From,at))
-
+	// wait for response
+	select {
+	case responseGot, ok := <- n.appendResponseChannel:
+		if ok {
+			return responseGot,nil
+		}
+	}	
+	return AppendResponse{ Reply: false, Term:n.currentTerm,From:n.id },errors.New(fmt.Sprintf("%s - Could not obtain a response for append entry",n.id))
 	
-	// heard from leader, set the trace
-	n.trace.lastHeardFromLeader = at
-	
-	if entry.Term > n.currentTerm {
-
-		go func(n *Node,term uint64,from string) {
-			n.eventChannel <- &HigherTermDiscovered{term:term,from:from}
-		}(n,entry.Term,entry.From)
-	}
-
-
-	// do other checks here - according to raft paper
-	// we will have to copy the log here
-	
-	return AppendResponse{ Reply: true, Term:n.currentTerm,From:n.id },nil
 }
 
 func (n *Node) RequestForVote(voteReq VoteRequest) (VoteResponse,error) {
@@ -164,22 +164,17 @@ func (n *Node) RequestForVote(voteReq VoteRequest) (VoteResponse,error) {
 		return VoteResponse{ VoteGranted:false,From:n.id,TermToUpdate:n.currentTerm },nil
 	}
 
-	if voteReq.Term > n.currentTerm {
-		go func(n *Node,term uint64,from string) {
-			n.eventChannel <- &HigherTermDiscovered{term:term,from:from}
-		}(n,voteReq.Term,voteReq.CandidateId)
-	}
+	
+	go func() {
+		n.eventChannel <- &GotRequestForVote{ voteRequest: voteReq }
+	}()
 
-	votedFor,ok := n.stable.Get(VotedForKey)
-	if !ok || votedFor == "" || votedFor == voteReq.CandidateId {
-		// other checks: !!!
-		// perform log checks
-
-		// store that the vote was granted
-		n.stable.Store(VotedForKey,voteReq.CandidateId)
-		// rasie votedFor event
-		return VoteResponse{ VoteGranted:true,From:n.id,TermToUpdate:n.currentTerm },nil
-		
+	// wait for response
+	select {
+	case voteGot, ok := <- n.voteResponseChannel:
+		if ok {
+			return voteGot,nil
+		}
 	}
 	
 	return VoteResponse{ VoteGranted:false,From:n.id,TermToUpdate:n.currentTerm },nil
@@ -191,6 +186,7 @@ func (n *Node) CurrentRole() Role {
 
 func (n *Node) Stop() {
 	n.running = false
+	n.stopTimeSignals()
 	n.quitChannel <- true
 	n.wg.Wait()
 }

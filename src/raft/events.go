@@ -31,5 +31,11 @@ type HigherTermDiscovered struct {
 	from string
 }
 
+type GotAppendEntryRequest struct {
+	entry Entry
+}
 
+type GotRequestForVote struct {
+	voteRequest VoteRequest
+}
 
