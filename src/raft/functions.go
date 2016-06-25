@@ -167,14 +167,14 @@ func (n *Node) startTimeSignals() {
 
 	go func() {
 		for _ = range n.electionTicker.C {
-			//logger.GetLogger().Log(fmt.Sprintf("%s - will send election notice at t: %d\n",n.id,t.UnixNano()))
 			n.eventChannel <- &ElectionNotice{}
 		}
 	}()
 
 	go func() {
-		for _ = range n.heartbeatTicker.C {
+		for _ = range n.heartbeatTicker.C {			
 			n.eventChannel <- &TimeForHeartbeat{}
+			
 		}
 	}()
 }
