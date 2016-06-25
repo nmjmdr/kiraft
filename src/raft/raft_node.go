@@ -185,6 +185,10 @@ func (n *Node) CurrentRole() Role {
 }
 
 func (n *Node) Stop() {
+	if n.running != true {
+		return
+	}
+
 	n.running = false
 	n.stopTimeSignals()
 	n.quitChannel <- true

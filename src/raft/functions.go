@@ -65,8 +65,7 @@ func (n *Node) askForVotes() {
 
 	// self vote
 	go func(n *Node) {
-		gotVote := GotVote{ response : VoteResponse { VoteGranted:true, From:n.id,TermToUpdate:0 } }
-
+		gotVote := GotVote{ response : VoteResponse { VoteGranted:true, From:n.id,TermToUpdate:0 } }		
 		n.eventChannel <- &gotVote
 	}(n)
 	
