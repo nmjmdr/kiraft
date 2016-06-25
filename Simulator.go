@@ -3,12 +3,16 @@ package main
 import (	
 	"raft"
 	"fmt"
+	"errors"
 )
 
 type Simulator interface {
 	Start()
 	Stop()
 	GetStates() []string
+	StartNode(index int) error
+	StopNode(index int) error
+	IsRunning(index int) (bool,error)
 }
 
 type sim struct {
@@ -42,9 +46,9 @@ func (s *sim) Start() {
 		go func(n raft.RaftNode) {
 			for {
 				select {
-				case role,ok := <- n.RoleChange():
+				case _,ok := <- n.RoleChange():
 					if ok {
-						fmt.Printf("%s - role: %d\n",n.Id(),role)
+						//fmt.Printf("%s - role: %d\n",n.Id(),role)
 					}
 				case <- s.quitChannel:
 					return
@@ -76,3 +80,47 @@ func (s *sim) Stop() {
 	s.quitChannel <- true
 }
 
+
+func (s *sim) StartNode(index int) error {
+
+	running,err := s.IsRunning(index)
+
+	if err != nil {
+		return err
+	}
+
+	if running {
+		return errors.New("Node is already running")
+	}
+		
+	s.nodes[index].Start()
+	return nil
+}
+
+func (s *sim) StopNode(index int) error {
+
+	running,err := s.IsRunning(index)
+
+	if err != nil {
+		return err
+	}
+
+	if !running {
+		return errors.New("Node is already stopped")
+	}
+
+	s.nodes[index].Stop()
+	return nil
+
+}
+
+
+func (s *sim) IsRunning(index int) (bool,error) {
+	if index < 0 || index > len(s.nodes) {
+		return false,errors.New("Wrong node index")
+	}
+	
+	node := s.nodes[index]
+
+	return node.IsRunning(),nil
+}
