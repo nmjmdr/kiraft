@@ -37,22 +37,22 @@ func followerFn(n *Node,evt interface{}) {
 		// ignore this, could have been a delayed vote response
 	case *GotAppendEntryResponse:
 		// could be a delayed response (this node could have been a leader earlier)
-
-		// should we check explictily for reply flag in response?
-		
-		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved Append entry response from: %s while being a follower - ",n.id,t.response.From))
-			
+		// should we check explictily for reply flag in response?		
+		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved Append entry response from: %s while being a follower - ",n.id,t.response.From))			
 		if t.response.Term < n.currentTerm {
 			logger.GetLogger().Log(fmt.Sprintf("With an older term, term: %d\n",t.response.Term))
 			// should we do something here?
 		} else {
 			logger.GetLogger().Log(fmt.Sprintf("With a current or and a newer term, term: %d - ignoring it, the node has already transitioned to follower\n",t.response.Term))
 		}
-	/*
-	// check if we need this? - as we are changing the way append entry is being handled
-	case *HigherTermDiscovered:
-		n.higherTermDiscovered(t.term)
-*/
+	case *StartElection:
+		// this can happen
+		// 1. if the node and has been a candidate
+		// 2. before it could send Start Election on the channel, it received a heartbeat and transformed into a follower
+		// 3. Now when it is a follower receives the start election notice
+		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved start election while being a follower - ",n.id))			
+				
+	
 	case *GotAppendEntryRequest:
 		n.handleAppendEntryRequest(t.entry)
 	case *GotRequestForVote:

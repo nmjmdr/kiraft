@@ -4,6 +4,8 @@ import (
 	"raft"
 	"fmt"
 	"errors"
+	"math/rand"
+	"time"
 )
 
 type Simulator interface {
@@ -25,6 +27,9 @@ type sim struct {
 }
 
 func NewSimulator(numNodes int) Simulator {
+
+	rand.Seed(time.Now().UTC().UnixNano())
+	
 	s := new(sim)
 	s.numNodes = numNodes
 
@@ -36,6 +41,8 @@ func NewSimulator(numNodes int) Simulator {
 
 	s.quitChannel = make(chan bool)
 
+
+	
 	return s
 }
 

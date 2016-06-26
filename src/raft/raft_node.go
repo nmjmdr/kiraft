@@ -117,6 +117,7 @@ func (n *Node) loop() {
 			select {
 			case evt,ok := <- n.eventChannel :
 				if ok {
+					//fmt.Println(n.currentRole)
 					n.handlers.functions[n.currentRole](n,evt)
 				}
 			case quit,_ := <- n.quitChannel:
