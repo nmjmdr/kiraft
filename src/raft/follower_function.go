@@ -22,6 +22,8 @@ func followerFn(n *Node,evt interface{}) {
 			logger.GetLogger().Log(fmt.Sprintf("%s - have not heard from the leader, will send start election event\n",n.id))
 			n.incrementTerm()
 			n.setRole(Candidate)
+			// reset votesGot
+			n.votesGot = 0
 			go func() {
 				// send StartElection here
 				n.eventChannel <- &StartElection{}

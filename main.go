@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"raft"
 )
 
 var numNodes int
@@ -28,7 +29,7 @@ func main() {
 	}
 
 	numNodes = num
-	s := NewSimulator(numNodes)
+	s := raft.NewSimulator(numNodes)
 
 	s.Start()
 
@@ -59,7 +60,7 @@ func main() {
 	
 }
 
-func handleCommand(s Simulator,command string) {
+func handleCommand(s raft.Simulator,command string) {
 
 	splits := strings.Split(command," ")
 

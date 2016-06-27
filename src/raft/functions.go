@@ -81,6 +81,7 @@ func (n *Node) askForVotes() {
 			voteResp,err := n.transport.RequestForVote(vreq,p)
 			if err != nil {
 				logger.GetLogger().Log(fmt.Sprintf("%s node - RequestForVote got an error response from peer %s. Error detail: %s\n",n.id,p.Id,err))
+				fmt.Printf("%s node - RequestForVote got an error response from peer %s. Error detail: %s\n",n.id,p.Id,err)
 				return
 			}
 
@@ -133,6 +134,8 @@ func (n *Node) setElectionTimeout(d time.Duration) {
 
 func (n *Node) incrementTerm() {
 	n.currentTerm = n.currentTerm + 1
+	n.stable.Store(CurrentTermKey,n.currentTerm)
+	// handle any error here from storing into stable
 }
 
 func (n *Node) setRole(role Role) {
@@ -147,6 +150,9 @@ func (n *Node) setRole(role Role) {
 
 func (n *Node) setTerm(term uint64) {
 	n.currentTerm = term
+	n.stable.Store(CurrentTermKey,n.currentTerm)
+	// handle any error here from storing into stable
+	
 }
 
 func (n *Node) setTimeoutValues() {
@@ -190,6 +196,7 @@ func (n *Node) setTermFromStable() {
 		// probably this is the first time we are running this node
 		n.currentTerm = 0
 		n.stable.Store(CurrentTermKey,n.currentTerm)
+		// handle any error here from storing into stable
 		return
 	}
 	n.currentTerm = term

@@ -47,8 +47,9 @@ func (i *InMemoryTransport) RequestForVote(vreq VoteRequest,peer Peer) (VoteResp
 	if !ok {
 		panic(fmt.Sprintf("%s peer not found in transport map\n",peer.Id))
 	}
-
+	
 	if !node.IsRunning() {
+		fmt.Printf("%s - is not running, returning error\n",node.Id())
 		return VoteResponse{},errors.New(fmt.Sprintf("%s peer is not running",peer.Id))
 	}
 	

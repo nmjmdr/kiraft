@@ -18,6 +18,8 @@ func candidateFn(n *Node,evt interface{}) {
 			n.eventChannel <- &StartElection{}
 		}()		
 	case *StartElection:
+		// reset votes Got
+		n.votesGot = 0
 		n.askForVotes()	
 	case *TimeForHeartbeat :
 		// ignore this
@@ -60,6 +62,9 @@ func handleGotVote(n *Node,t *GotVote) {
 		return
 	}
 
+	fmt.Printf("%s - Got vote response - granted:%t, from: %s\n",n.id,t.response.VoteGranted,t.response.From)
+	fmt.Printf("%s - current votes got: %d\n",n.id,n.votesGot)
+
 	if !t.response.VoteGranted {
 		// vote was not granted, possibly the other node has already vote for another candidate
 		return
@@ -67,10 +72,12 @@ func handleGotVote(n *Node,t *GotVote) {
 
 	n.votesGot++
 
+	fmt.Printf("%s - Votes Got after incrementing: %d\n",n.id,n.votesGot)
+
 	majority := uint32(len(n.config.Peers())/2 + 1)
 	if n.votesGot >= majority {
 		// set as leader
-		n.setRole(Leader)
+		n.setRole(Leader)	
 		go func() {
 			// start the leader
 			n.eventChannel <- &StartLeader{}

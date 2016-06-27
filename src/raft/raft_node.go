@@ -100,6 +100,7 @@ func (n *Node) Start() {
 
 	n.running = true
 	n.currentRole = Follower
+	n.votesGot = 0
 	n.setTermFromStable()
 
 	n.startTimeSignals()
