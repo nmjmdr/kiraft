@@ -5,12 +5,13 @@ import (
 )
 
 
-func makeNodes(numNodes int,config Config,stable Stable,transport *InMemoryTransport) []RaftNode  {
+func makeNodes(numNodes int,config Config,transport *InMemoryTransport) []RaftNode  {
 
 	nodes := make([]RaftNode,numNodes)
 	
 	for i:=0;i<numNodes;i++ {
 		str := strconv.Itoa(i)
+		stable := NewInMemoryStable()
 		nodes[i] = NewNode(str,config,transport,stable)
 		transport.SetNode(str,nodes[i])
 	}

@@ -26,11 +26,7 @@ func candidateFn(n *Node,evt interface{}) {
 		// the node is a candidate, nothing to do
 	case *GotVote:
 		handleGotVote(n,t)
-	/*
-	// check if we need this?
-	case *HigherTermDiscovered:
-		n.higherTermDiscovered(t.term)
-*/
+	
 	case *GotAppendEntryResponse:
 		// could be a delayed response (this node could have been a leader earlier)
 

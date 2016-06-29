@@ -1,0 +1,9 @@
+*.txt
+*.exe
+*.go~
+/dist
+/node_modules
+*.js~
+*.json~
+
+

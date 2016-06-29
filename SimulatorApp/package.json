@@ -1,0 +1,23 @@
+{
+  "name": "simulatorapp",
+  "version": "1.0.0",
+  "description": "app for raft simulator",
+  "main": "index.js",
+  "dependencies": {
+    "react-redux": "^4.4.5",
+    "react": "^15.1.0",
+    "redux-devtools": "^3.3.1",
+    "redux": "^3.5.2"
+  },
+  "devDependencies": {
+    "babel-core": "^6.10.4",
+    "babel-loader": "^6.2.4",
+    "file-loader": "^0.9.0",
+    "webpack": "^1.13.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

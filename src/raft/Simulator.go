@@ -20,7 +20,6 @@ type Simulator interface {
 type sim struct {
 	nodes []RaftNode
 	config Config
-	stable Stable
 	transport *InMemoryTransport
 	numNodes int
 	quitChannel chan bool
@@ -34,10 +33,9 @@ func NewSimulator(numNodes int) Simulator {
 	s.numNodes = numNodes
 
 	s.config = getPeerConfiguration(s.numNodes)
-	s.stable = NewInMemoryStable()
 	s.transport = NewInMemoryTransport()
 	
-	s.nodes = makeNodes(s.numNodes,s.config,s.stable,s.transport)
+	s.nodes = makeNodes(s.numNodes,s.config,s.transport)
 
 	s.quitChannel = make(chan bool)
 

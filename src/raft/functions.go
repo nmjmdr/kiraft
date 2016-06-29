@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"fmt"
 	"logger"
+	"strings"
+	"strconv"
 )
 
 func (n *Node) handleRequestForVote(voteReq VoteRequest) {
@@ -13,20 +15,54 @@ func (n *Node) handleRequestForVote(voteReq VoteRequest) {
 		n.higherTermDiscovered(voteReq.Term)
 	}
 
-	votedFor,ok := n.stable.Get(VotedForKey)
-	if !ok || votedFor == "" || votedFor == voteReq.CandidateId {
-		// other checks: !!!
-		// perform log checks
+	str,ok := n.stable.Get(VotedForKey)
 
-		// store that the vote was granted
-		n.stable.Store(VotedForKey,voteReq.CandidateId)
+	if !ok {
+		// this is the fisrt time this node is voting
+		n.stable.Store(VotedForKey,n.packVotedFor(voteReq.Term,voteReq.CandidateId))
 		n.voteResponseChannel <- VoteResponse{ VoteGranted:true,From:n.id,TermToUpdate:n.currentTerm }
-		
-	} else {
-		n.voteResponseChannel <- VoteResponse{ VoteGranted:false,From:n.id,TermToUpdate:n.currentTerm }
+		return
 	}
+
+	votedTerm,votedFor := n.unpackVotedFor(str)
+
+	// have we already voted for a different guy for request  term or a higher term??
+	if  (votedFor != voteReq.CandidateId) && (votedTerm >= voteReq.Term) {		
+		// we already voted for a different guy, deny the vote
+		logger.GetLogger().Log(fmt.Sprintf("%s - has aldready voted for %s in term %d, hence denying vote request from %s with term: %d",n.id,votedFor,votedTerm,voteReq.CandidateId,voteReq.Term))
+		n.voteResponseChannel <- VoteResponse{ VoteGranted:false,From:n.id,TermToUpdate:n.currentTerm }
+		return
+	}
+	// other checks: !!!
+	// perform log checks
+
+	// store that the vote was granted
+	n.stable.Store(VotedForKey,n.packVotedFor(voteReq.Term,voteReq.CandidateId))
+	n.voteResponseChannel <- VoteResponse{ VoteGranted:true,From:n.id,TermToUpdate:n.currentTerm }		
+	
 }
 
+func (n *Node) packVotedFor(term uint64,votedFor string) string {
+
+	termString := strconv.FormatUint(term,10)
+	return (termString + ":" + votedFor)
+}
+
+func (n *Node) unpackVotedFor(str string) (uint64,string) {
+
+	splits := strings.Split(str,":")
+
+	if splits == nil || len(splits) != 2 {
+		panic(fmt.Sprintf("%s- Stable has an incorrect value for votedfor",n.id))
+	}
+
+	term,err := strconv.ParseUint(splits[0],10,64)
+	if err != nil {
+		panic(fmt.Sprintf("%s- Stable has an incorrect value for votedfor - %s",n.id,err))
+	}
+
+	return term,splits[1]
+}
 
 
 func (n *Node) handleAppendEntryRequest(entry Entry) {
@@ -34,10 +70,20 @@ func (n *Node) handleAppendEntryRequest(entry Entry) {
 	// first set the trace
 	n.trace.lastHeardFromLeader = time.Now().UnixNano()
 
+	// if a candidate and the term is atleast as much as the current term, step down
+	if entry.Term >= n.currentTerm && n.currentRole == Candidate {
+		// step down as candidate
+		n.currentRole = Follower
+		fmt.Printf("%s - got an append entry from %s, stepping down as candidate, becoming a follower\n",n.id,entry.From)
+		logger.GetLogger().Log(fmt.Sprintf("%s - got an append entry from %s, stepping down as candidate, becoming a follower\n",n.id,entry.From))
+	}
+
+	
 	if entry.Term > n.currentTerm {
 		n.higherTermDiscovered(entry.Term)
 	}
 
+	
 	// do other checks here - according to raft paper
 	// we will have to copy the log here
 
@@ -93,8 +139,8 @@ func (n *Node) askForVotes() {
 
 
 func (n *Node) higherTermDiscovered(term uint64) {
-	n.currentTerm = term
-
+	n.setTerm(term)
+	
 	if n.currentRole != Follower {
 		logger.GetLogger().Log(fmt.Sprintf("%s - discovered a higher term, will transition from %d to 3 (follower)\n",n.id,n.currentRole))
 		n.setRole(Follower)
@@ -135,7 +181,6 @@ func (n *Node) setElectionTimeout(d time.Duration) {
 func (n *Node) incrementTerm() {
 	n.currentTerm = n.currentTerm + 1
 	n.stable.Store(CurrentTermKey,n.currentTerm)
-	// handle any error here from storing into stable
 }
 
 func (n *Node) setRole(role Role) {
@@ -151,13 +196,15 @@ func (n *Node) setRole(role Role) {
 func (n *Node) setTerm(term uint64) {
 	n.currentTerm = term
 	n.stable.Store(CurrentTermKey,n.currentTerm)
-	// handle any error here from storing into stable
 	
 }
 
 func (n *Node) setTimeoutValues() {
 	n.electionTimeout = getRandomTimeout(MinElectionTimeout,MaxElectionTimeout)
 	n.heartbeatTimeout = time.Duration(HeartbeatTimeout * time.Millisecond)
+
+	fmt.Printf("%s - election time out set to: %d\n,",n.id,n.electionTimeout)
+	logger.GetLogger().Log(fmt.Sprintf("%s - election time out set to: %d\n,",n.id,n.electionTimeout))
 }
 
 func getRandomTimeout(startRange int,endRange int) time.Duration {
@@ -196,7 +243,6 @@ func (n *Node) setTermFromStable() {
 		// probably this is the first time we are running this node
 		n.currentTerm = 0
 		n.stable.Store(CurrentTermKey,n.currentTerm)
-		// handle any error here from storing into stable
 		return
 	}
 	n.currentTerm = term

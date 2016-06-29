@@ -52,9 +52,7 @@ func followerFn(n *Node,evt interface{}) {
 		// 1. if the node and has been a candidate
 		// 2. before it could send Start Election on the channel, it received a heartbeat and transformed into a follower
 		// 3. Now when it is a follower receives the start election notice
-		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved start election while being a follower - ",n.id))			
-				
-	
+		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved start election while being a follower - ",n.id))		
 	case *GotAppendEntryRequest:
 		n.handleAppendEntryRequest(t.entry)
 	case *GotRequestForVote:
