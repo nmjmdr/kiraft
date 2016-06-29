@@ -44,6 +44,15 @@ func candidateFn(n *Node,evt interface{}) {
 		n.handleAppendEntryRequest(t.entry)
 	case *GotRequestForVote:
 		n.handleRequestForVote(t.voteRequest)
+	case *StartLeader:
+		// this can happen
+		// 1. if the node and has been a candidate and then got elected as leader, but before it could handle event -> StartLeader
+		// 2. before it send its heartbeat, a follower timedout and started a new election with incremented term
+		// 3. now this node discoveres the higher term and changes to follower, now that node could not get elected as leader (may be some other node was stooped)
+		// 4. Now this node becomes a candidate again
+		// 4. Now it gets this event - which should be ignored
+		logger.GetLogger().Log(fmt.Sprintf("Node %s - recieved start leader while being a candidate, ignoring it ",n.id))
+	
 	default :
 		panic(fmt.Sprintf("%s - Unexpected event %T recieved by candidate function\n",n.id,t))
 	}

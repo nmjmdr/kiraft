@@ -38,6 +38,9 @@ func (n *Node) handleRequestForVote(voteReq VoteRequest) {
 
 	// store that the vote was granted
 	n.stable.Store(VotedForKey,n.packVotedFor(voteReq.Term,voteReq.CandidateId))
+	// granted vote, reset the lastHeard timer
+	// reference: https://groups.google.com/d/msg/raft-dev/Usc8pcm9ecA/5Pg7sxZ0IgAJ
+	n.trace.lastHeardFromLeader = time.Now().UnixNano()
 	n.voteResponseChannel <- VoteResponse{ VoteGranted:true,From:n.id,TermToUpdate:n.currentTerm }		
 	
 }

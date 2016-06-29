@@ -15,7 +15,10 @@ module.exports = {
       {
         test: /\.js$/,
         exclude: /node_modules/,
-        loaders: ["babel-loader"]
+        loader: 'babel',
+        query : {
+          presets : ['react']
+        }
       }
     ]
   }
