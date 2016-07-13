@@ -1,23 +1,23 @@
+var path = require('path');
+var webpack = require('webpack');
+
+
 module.exports = {
   context: __dirname,
-  entry: {
-    javascript: "./components/app.js",
-    html : "./index.html"
-   },
-
+  entry: "./main.js",
+  
   output: {
-    filename: "app.js",
-    path: __dirname + "/dist"
-    
+    filename: 'bundle.js',
+    path: __dirname    
   },
   module : {
     loaders: [
       {
-        test: /\.js$/,
+        test: /.jsx?$/,
         exclude: /node_modules/,
-        loader: 'babel',
+        loader: 'babel-loader',
         query : {
-          presets : ['react']
+          presets : ['es2015','react']
         }
       }
     ]
